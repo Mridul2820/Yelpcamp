@@ -73,6 +73,7 @@ router.delete("/:id", middleware.checkCampgroundOwnerShip, function(req,res){
         if(err){
             res.redirect("/campgrounds");
         }else{
+            req.flash("warning", "Campground Deleted!!");
             res.redirect("/campgrounds")
         }
     })
