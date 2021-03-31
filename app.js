@@ -7,14 +7,14 @@ var passport = require("passport");
 var LocalStrategy = require("passport-local");
 var methodOverride = require("method-override");
 var User = require("./models/user");
-var seedDB = require("./seeds");
+// var seedDB = require("./seeds");
 
 //Requiring routes
 var campgroundsRoutes = require("./routes/campgrounds");
 var commentRoutes = require("./routes/comments");
 var indexRoutes = require("./routes/index");
 
-mongoose.connect("mongodb://localhost/yelp_camp_v6", { useNewUrlParser: true });
+mongoose.connect("mongodb://localhost/yelp_camp_v12", { useNewUrlParser: true });
 app.use(bodyParser.urlencoded({extended: true}));
 app.set("view engine", "ejs");
 app.use(express.static(__dirname + "/public"));

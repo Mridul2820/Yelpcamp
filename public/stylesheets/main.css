@@ -13,3 +13,8 @@
 .delete-form{
     display: inline;
 }
+
+#trademark{
+    z-index: 1;
+    font-display: bottom;
+}
