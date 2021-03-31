@@ -2,32 +2,37 @@ var express = require("express");
 var app = express();
 var bodyParser = require("body-parser");
 var mongoose = require("mongoose");
+var passport = require("passport");
+var LocalStrategy = require("passport-local");
 var Campground = require("./models/campground");
-var seedDB = require("./seeds");
 var Comment = require("./models/comment");
+var User = require("./models/user");
+var seedDB = require("./seeds");
 
-mongoose.connect("mongodb://localhost/yelp_camp", { useNewUrlParser: true });
+mongoose.connect("mongodb://localhost/yelp_camp_v6", { useNewUrlParser: true });
 app.use(bodyParser.urlencoded({extended: true}));
 app.set("view engine", "ejs")
 app.use(express.static(__dirname + "/public"))
 seedDB();
 
+//passport configuration
+app.use(require("express-session")({
+    secret: "Pika Pika",
+    resave: false,
+    saveUninitialized: false
+}));
 
-// Campground.create(
-//     {
-//         name: "Roof of the World",
-//         image: "https://t-ec.bstatic.com/images/hotel/max1024x768/647/64748006.jpg",
-//         description: "The Roof of the World or Top of the World is a metaphoric description of the high region in the world, also known as High Asia. The term usually refers to the mountainous interior of Asia, i.e. the Himalayas"
-//     }, function(err, campground){
-//         if(err){
-//             console.log(err);
-//         }else{
-//             console.log("New Campground Created");
-//             console.log(campground);
-//         }
-//     }
-// )
+app.use(passport.initialize());
+app.use(passport.session());
 
+passport.use(new LocalStrategy(User.authenticate()));
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
+app.use(function(req,res,next){
+    res.locals.currentUser = req.user;
+    next();
+})
 
 app.get("/" , function(req,res){
     res.render("landing")
@@ -43,7 +48,7 @@ app.get("/campgrounds" , function(req,res){
     })
 });
 
-app.post("/campgrounds" , function(req,res){
+app.post("/campgrounds", isLoggedIn, function(req,res){
     var name = req.body.name;
     var image = req.body.image;
     var desc = req.body.description;
@@ -58,7 +63,7 @@ app.post("/campgrounds" , function(req,res){
     
 });
 
-app.get("/campgrounds/new" , function(req,res){
+app.get("/campgrounds/new", isLoggedIn, function(req,res){
     res.render("campgrounds/new_camp");
 });
 
@@ -75,7 +80,7 @@ app.get("/campgrounds/:id" , function(req,res){
 // ==============
 // Comment Route
 // ==============
-app.get("/campgrounds/:id/comments/new", function(req,res){
+app.get("/campgrounds/:id/comments/new", isLoggedIn, function(req,res){
     Campground.findById(req.params.id, function(err,campground){
         if(err){
             console.log(err);
@@ -85,7 +90,7 @@ app.get("/campgrounds/:id/comments/new", function(req,res){
     })
 });
 
-app.post("/campgrounds/:id/comments", function(req,res){
+app.post("/campgrounds/:id/comments", isLoggedIn, function(req,res){
     Campground.findById(req.params.id, function(err,campground){
         if(err){
             console.log(err);
@@ -103,6 +108,50 @@ app.post("/campgrounds/:id/comments", function(req,res){
         }
     });
 })
+
+//auth routes
+//register form
+app.get("/register", function(req,res){
+    res.render("register")
+})
+
+//handel sign up logic
+app.post("/register", function(req,res){
+    var newUser = new User({username: req.body.username});
+    User.register(newUser, req.body.password, function(err,user){
+        if(err){
+            console.log(err)
+            return res.render("register")
+        }
+        passport.authenticate("local")(req, res, function(){
+            res.redirect("/campgrounds")
+        });
+    });
+});
+
+//show log in form
+app.get("/login", function(req,res){
+    res.render("login")
+})
+//login logic
+app.post("/login", passport.authenticate("local", {
+    successRedirect: "/campgrounds",
+    failureRedirect: "/login"
+    }), function(req,res){
+});
+
+//log out
+app.get("/logout", function(req,res){
+    req.logOut();
+    res.redirect("/campgrounds")
+});
+
+function isLoggedIn(req,res,next){
+    if(req.isAuthenticated()){
+        return next();
+    }
+    res.redirect("/login")
+}
 
 app.listen(3000 , function(){
     console.log("The Yelpcamp server has started")
