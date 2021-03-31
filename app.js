@@ -1,40 +1,79 @@
 var express = require("express");
 var app = express();
 var bodyParser = require("body-parser");
+var mongoose = require("mongoose");
+
+mongoose.connect("mongodb://localhost/yelp_camp", { useNewUrlParser: true });
 
 app.use(bodyParser.urlencoded({extended: true}));
 app.set("view engine", "ejs")
 
-var campgrounds = [
-    {name : "Roof of the World", image : "https://t-ec.bstatic.com/images/hotel/max1024x768/647/64748006.jpg"},
-    {name : "Cloud's Rest", image : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSwj2-KBUFStyTsVQ5o-bVOD_cfFiLE0FjO5gvzjw1CJJ_BKRkd"},
-    {name : "Lost Coast Trail", image : "http://www.camp-liza.com/wp-content/uploads/2017/10/20170708_093155_HDR-2.jpg"},
-    {name : "Roof of the World", image : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSHH5riFeipmBi5bcMb3445m7yu5Of0T5tVpzOFndTbq5Gox0BS"},
-    {name : "Cloud's Rest", image : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT0nmGdjuNrRu4vnU6_7VIOTo0s6I2uf7iL4PWc-EqaJD-oncxS"},
-    {name : "Lost Coast Trail", image : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRGkmX4p1Q39gN48OxFNwYNRXc2qTgMEpn968S7zXEhD9Pv4xgKaw"},
-    {name : "Roof of the World", image : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR1zJ98wA-Zqu4Bf3_1tNYUxhLRma9p0VhZ85e0ZLxXh76cGNfp2g"},
-    {name : "Cloud's Rest", image : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT7_gBSZXD_Mqyw8NpBnXjN5VTHWqhZ-rIK87g8gpYE6nZmORe7"},
-]
+var campgroundSchema = new mongoose.Schema({
+    name: String,
+    image: String,
+    description: String
+});
+
+var Campground = mongoose.model("Campground", campgroundSchema);
+
+// Campground.create(
+//     {
+//         name: "Roof of the World",
+//         image: "https://t-ec.bstatic.com/images/hotel/max1024x768/647/64748006.jpg",
+//         description: "The Roof of the World or Top of the World is a metaphoric description of the high region in the world, also known as High Asia. The term usually refers to the mountainous interior of Asia, i.e. the Himalayas"
+//     }, function(err, campground){
+//         if(err){
+//             console.log(err);
+//         }else{
+//             console.log("New Campground Created");
+//             console.log(campground);
+//         }
+//     }
+// )
+
 
 app.get("/" , function(req,res){
     res.render("landing")
 })
 
 app.get("/campgrounds" , function(req,res){
-    res.render("campgrounds", {campgrounds:campgrounds})
+    Campground.find({}, function(err, allcampgrounds){
+        if(err){
+            console.log(err);
+        }else{
+            res.render("index", {campgrounds:allcampgrounds});
+        }
+    })
 });
 
 app.post("/campgrounds" , function(req,res){
     var name = req.body.name;
     var image = req.body.image;
-    var newCampground = {name: name, image: image};
-    campgrounds.push(newCampground);
-    res.redirect("/campgrounds")
+    var desc = req.body.description;
+    var newCampground = {name: name, image: image, description: desc};
+    Campground.create(newCampground, function(err, newlyCreated){
+        if(err){
+            console.log(err);
+        }else{
+            res.redirect("/campgrounds");
+        }
+    })
+    
 });
 
 app.get("/campgrounds/new" , function(req,res){
     res.render("new_camp");
 });
+
+app.get("/campgrounds/:id" , function(req,res){
+    Campground.findById(req.params.id, function(err,foundCampground){
+        if(err){
+            console.log(err);
+        }else{
+            res.render("show", {campground: foundCampground});
+        }
+    })    
+})
 
 app.listen(3000 , function(){
     console.log("The Yelpcamp server has started")
